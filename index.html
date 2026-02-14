@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to PowerPoint 変換アプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'メイリオ', 'Meiryo', 'Hiragino Kaku Gothic ProN', sans-serif;
+            background: linear-gradient(135deg, #1E3A5F 0%, #2B9A9E 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #1E3A5F;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .app-content {
+            display: none;
+        }
+
+        .app-content.show {
+            display: block;
+        }
+
+        .upload-area {
+            border: 3px dashed #2B9A9E;
+            border-radius: 15px;
+            padding: 60px 40px;
+            text-align: center;
+            background: #F5FFFE;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover {
+            background: #E8F9F7;
+            border-color: #1E7B7E;
+        }
+
+        .upload-area.dragover {
+            background: #D4F4F0;
+            border-color: #1E7B7E;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            color: #2B9A9E;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            color: #1E3A5F;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 14px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            background: #F5F5F5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-name {
+            color: #1E3A5F;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2B9A9E 0%, #1E7B7E 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(43, 154, 158, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .progress {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .progress.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #F5F5F5;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2B9A9E 0%, #1E7B7E 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        .preview {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .preview.show {
+            display: block;
+        }
+
+        .preview-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .preview-image {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .preview-image .page-number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(30, 58, 95, 0.9);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .feature-list {
+            background: #F5FFFE;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        .feature-list h3 {
+            color: #1E3A5F;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .feature-list ul {
+            list-style: none;
+        }
+
+        .feature-list li {
+            color: #333;
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #2B9A9E;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            margin-right: 10px;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 PDF → PowerPoint 変換</h1>
+            <p>PDFファイルを編集可能なPowerPointに変換します</p>
+        </div>
+
+        <div class="loading" id="loading">
+            <p><span class="spinner">⚙️</span>ライブラリを読み込み中...</p>
+        </div>
+
+        <div class="app-content" id="appContent">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">PDFファイルをドラッグ&ドロップ</div>
+                <div class="upload-hint">または、クリックしてファイルを選択</div>
+                <input type="file" id="fileInput" accept=".pdf">
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <div class="file-name" id="fileName"></div>
+                <div id="pageCount"></div>
+            </div>
+
+            <div class="preview" id="preview">
+                <h3 style="color: #1E3A5F; margin-bottom: 10px;">プレビュー</h3>
+                <div class="preview-images" id="previewImages"></div>
+            </div>
+
+            <button class="btn btn-primary" id="convertBtn" disabled>
+                PowerPointに変換
+            </button>
+
+            <div class="progress" id="progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                </div>
+                <div class="status" id="status">準備中...</div>
+            </div>
+
+            <div class="feature-list">
+                <h3>✨ 特徴</h3>
+                <ul>
+                    <li>元のデザインを100%維持（高解像度画像として各スライドに配置）</li>
+                    <li>ブラウザ上で完結（サーバーにアップロード不要）</li>
+                    <li>完全無料・ログイン不要</li>
+                    <li>プライバシー保護（全ての処理はあなたのPC上で実行）</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    
+    <script>
+        // Wait for all libraries to load
+        let librariesLoaded = false;
+        let pdfLib = null;
+        let pptxLib = null;
+
+        function checkLibraries() {
+            return new Promise((resolve) => {
+                const checkInterval = setInterval(() => {
+                    if (typeof pdfjsLib !== 'undefined' && typeof PptxGenJS !== 'undefined') {
+                        clearInterval(checkInterval);
+                        pdfLib = pdfjsLib;
+                        pptxLib = PptxGenJS;
+                        resolve(true);
+                    }
+                }, 100);
+
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    if (!librariesLoaded) {
+                        alert('ライブラリの読み込みに失敗しました。ページを再読み込みしてください。');
+                        resolve(false);
+                    }
+                }, 10000);
+            });
+        }
+
+        // Initialize when libraries are ready
+        async function initialize() {
+            const loading = document.getElementById('loading');
+            const appContent = document.getElementById('appContent');
+            
+            loading.classList.add('show');
+            
+            librariesLoaded = await checkLibraries();
+            
+            loading.classList.remove('show');
+            
+            if (librariesLoaded) {
+                appContent.classList.add('show');
+                setupApp();
+            }
+        }
+
+        function setupApp() {
+            // PDF.js設定
+            pdfLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const pageCount = document.getElementById('pageCount');
+            const convertBtn = document.getElementById('convertBtn');
+            const progress = document.getElementById('progress');
+            const progressFill = document.getElementById('progressFill');
+            const status = document.getElementById('status');
+            const preview = document.getElementById('preview');
+            const previewImages = document.getElementById('previewImages');
+
+            let selectedFile = null;
+            let pdfDocument = null;
+
+            // Upload area click
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type === 'application/pdf') {
+                    handleFile(files[0]);
+                }
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            async function handleFile(file) {
+                selectedFile = file;
+                fileName.textContent = `📄 ${file.name}`;
+                
+                // Get page count
+                const arrayBuffer = await file.arrayBuffer();
+                pdfDocument = await pdfLib.getDocument(arrayBuffer).promise;
+                const numPages = pdfDocument.numPages;
+                pageCount.textContent = `ページ数: ${numPages}`;
+                
+                fileInfo.classList.add('show');
+                convertBtn.disabled = false;
+
+                // Show preview
+                await showPreview(pdfDocument, numPages);
+            }
+
+            async function showPreview(pdf, numPages) {
+                previewImages.innerHTML = '';
+                const maxPreview = Math.min(numPages, 6);
+
+                for (let i = 1; i <= maxPreview; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.5 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'preview-image';
+                    
+                    const img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/png');
+                    
+                    const pageNum = document.createElement('div');
+                    pageNum.className = 'page-number';
+                    pageNum.textContent = `${i}`;
+                    
+                    previewDiv.appendChild(img);
+                    previewDiv.appendChild(pageNum);
+                    previewImages.appendChild(previewDiv);
+                }
+
+                if (numPages > maxPreview) {
+                    const moreDiv = document.createElement('div');
+                    moreDiv.className = 'preview-image';
+                    moreDiv.style.display = 'flex';
+                    moreDiv.style.alignItems = 'center';
+                    moreDiv.style.justifyContent = 'center';
+                    moreDiv.style.background = '#f0f0f0';
+                    moreDiv.style.minHeight = '150px';
+                    moreDiv.innerHTML = `<p style="color: #666; font-weight: bold;">+${numPages - maxPreview} ページ</p>`;
+                    previewImages.appendChild(moreDiv);
+                }
+
+                preview.classList.add('show');
+            }
+
+            // Convert button
+            convertBtn.addEventListener('click', async () => {
+                if (!selectedFile) return;
+                
+                convertBtn.disabled = true;
+                progress.classList.add('show');
+                
+                try {
+                    await convertToPowerPoint();
+                } catch (error) {
+                    console.error('変換エラー:', error);
+                    alert('変換中にエラーが発生しました: ' + error.message);
+                    convertBtn.disabled = false;
+                    progress.classList.remove('show');
+                }
+            });
+
+            async function convertToPowerPoint() {
+                const numPages = pdfDocument.numPages;
+
+                updateProgress(0, `PDFを読み込み中... (${numPages}ページ)`);
+
+                const pres = new pptxLib();
+                pres.layout = 'LAYOUT_16x9';
+                pres.author = 'PDF to PPTX Converter';
+                pres.title = selectedFile.name.replace('.pdf', '');
+
+                for (let i = 1; i <= numPages; i++) {
+                    updateProgress((i / numPages) * 90, `ページ ${i}/${numPages} を変換中...`);
+                    
+                    const page = await pdfDocument.getPage(i);
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+                    
+                    const imageData = canvas.toDataURL('image/png');
+                    
+                    const slide = pres.addSlide();
+                    slide.addImage({
+                        data: imageData,
+                        x: 0,
+                        y: 0,
+                        w: '100%',
+                        h: '100%'
+                    });
+                }
+
+                updateProgress(95, 'PowerPointファイルを生成中...');
+                
+                const fileName = selectedFile.name.replace('.pdf', '') + '.pptx';
+                await pres.writeFile({ fileName: fileName });
+                
+                updateProgress(100, '✅ 完了！ダウンロードが開始されました');
+                
+                setTimeout(() => {
+                    convertBtn.disabled = false;
+                    progress.classList.remove('show');
+                    progressFill.style.width = '0%';
+                    progressFill.textContent = '0%';
+                }, 2000);
+            }
+
+            function updateProgress(percent, message) {
+                progressFill.style.width = percent + '%';
+                progressFill.textContent = Math.round(percent) + '%';
+                status.innerHTML = message.includes('中') ? `<span class="spinner">⚙️</span>${message}` : message;
+            }
+        }
+
+        // Start initialization when page loads
+        window.addEventListener('load', initialize);
+    </script>
+</body>
+</html>
